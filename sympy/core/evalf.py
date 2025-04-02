@@ -13,10 +13,10 @@ from mpmath import (
     make_mpc, make_mpf, mp, mpc, mpf, nsum, quadts, quadosc, workprec)
 from mpmath import inf as mpmath_inf
 from mpmath.libmp import (from_int, from_man_exp, from_rational, fhalf,
-        fnan, finf, fninf, fnone, fone, fzero, mpf_abs, mpf_add,
-        mpf_atan, mpf_atan2, mpf_cmp, mpf_cos, mpf_e, mpf_exp, mpf_log, mpf_lt,
-        mpf_mul, mpf_neg, mpf_pi, mpf_pow, mpf_pow_int, mpf_shift, mpf_sin,
-        mpf_sqrt, normalize, round_nearest, to_int, to_str)
+                          fnan, finf, fninf, fnone, fone, fzero, mpf_abs, mpf_add,
+                          mpf_atan, mpf_atan2, mpf_cmp, mpf_cos, mpf_e, mpf_exp, mpf_log, mpf_lt,
+                          mpf_mul, mpf_neg, mpf_pi, mpf_pow, mpf_pow_int, mpf_shift, mpf_sin,
+                          mpf_sqrt, normalize, round_nearest, to_int, to_str, mpf_tan)
 from mpmath.libmp import bitcount as mpmath_bitcount
 from mpmath.libmp.backend import MPZ
 from mpmath.libmp.libmpc import _infs_nan
@@ -461,9 +461,9 @@ def get_integer_part(expr: 'Expr', no: int, options: OPT_DICT, return_ints=False
 
     re_, im_, re_acc, im_acc = None, None, None, None
 
-    if ire:
+    if ire is not None and ire != fzero:
         re_, re_acc = calc_part(re(expr, evaluate=False), ire)
-    if iim:
+    if iim is not None and iim != fzero:
         im_, im_acc = calc_part(im(expr, evaluate=False), iim)
 
     if return_ints:
@@ -895,15 +895,16 @@ def evalf_exp(expr: 'exp', prec: int, options: OPT_DICT) -> TMP_RES:
 
 def evalf_trig(v: 'Expr', prec: int, options: OPT_DICT) -> TMP_RES:
     """
-    This function handles sin and cos of complex arguments.
+    This function handles sin , cos and tan of complex arguments.
 
-    TODO: should also handle tan of complex arguments.
     """
-    from sympy.functions.elementary.trigonometric import cos, sin
+    from sympy.functions.elementary.trigonometric import cos, sin, tan
     if isinstance(v, cos):
         func = mpf_cos
     elif isinstance(v, sin):
         func = mpf_sin
+    elif isinstance(v,tan):
+        func = mpf_tan
     else:
         raise NotImplementedError
     arg = v.args[0]
@@ -919,6 +920,8 @@ def evalf_trig(v: 'Expr', prec: int, options: OPT_DICT) -> TMP_RES:
         if isinstance(v, cos):
             return fone, None, prec, None
         elif isinstance(v, sin):
+            return None, None, None, None
+        elif isinstance(v,tan):
             return None, None, None, None
         else:
             raise NotImplementedError
@@ -943,7 +946,7 @@ def evalf_trig(v: 'Expr', prec: int, options: OPT_DICT) -> TMP_RES:
         accuracy = (xprec - xsize) - gap
         if accuracy < prec:
             if options.get('verbose'):
-                print("SIN/COS", accuracy, "wanted", prec, "gap", gap)
+                print("SIN/COS/TAN", accuracy, "wanted", prec, "gap", gap)
                 print(to_str(y, 10))
             if xprec > options.get('maxprec', DEFAULT_MAXPREC):
                 return y, None, accuracy, None
@@ -1260,9 +1263,11 @@ def hypsum(expr: 'Expr', n: 'Symbol', start: int, prec: int) -> mpf:
     if h < 0:
         raise ValueError("Sum diverges like (n!)^%i" % (-h))
 
-    term = expr.subs(n, 0)
-    if not term.is_Rational:
+    eterm = expr.subs(n, 0)
+    if not eterm.is_Rational:
         raise NotImplementedError("Non rational term functionality is not implemented.")
+
+    term: Rational = eterm # type: ignore
 
     # Direct summation if geometric or faster
     if h > 0 or (h == 0 and abs(g) > 1):
@@ -1321,7 +1326,7 @@ def evalf_prod(expr: 'Product', prec: int, options: OPT_DICT) -> TMP_RES:
 def evalf_sum(expr: 'Sum', prec: int, options: OPT_DICT) -> TMP_RES:
     from .numbers import Float
     if 'subs' in options:
-        expr = expr.subs(options['subs'])
+        expr = expr.subs(options['subs']) # type: ignore
     func = expr.function
     limits = expr.limits
     if len(limits) != 1 or len(limits[0]) != 3:
@@ -1401,7 +1406,7 @@ def _create_evalf_table():
     from sympy.functions.elementary.exponential import exp, log
     from sympy.functions.elementary.integers import ceiling, floor
     from sympy.functions.elementary.piecewise import Piecewise
-    from sympy.functions.elementary.trigonometric import atan, cos, sin
+    from sympy.functions.elementary.trigonometric import atan, cos, sin, tan
     from sympy.integrals.integrals import Integral
     evalf_table = {
         Symbol: evalf_symbol,
@@ -1423,6 +1428,7 @@ def _create_evalf_table():
 
         cos: evalf_trig,
         sin: evalf_trig,
+        tan: evalf_trig,
 
         Add: evalf_add,
         Mul: evalf_mul,
@@ -1681,15 +1687,15 @@ class EvalfMixin:
 
     n = evalf
 
-    def _evalf(self, prec):
+    def _evalf(self, prec: int) -> Expr:
         """Helper for evalf. Does the same thing but takes binary precision"""
         r = self._eval_evalf(prec)
         if r is None:
-            r = self
-        return r
+            r = self # type: ignore
+        return r # type: ignore
 
-    def _eval_evalf(self, prec):
-        return
+    def _eval_evalf(self, prec: int) -> Expr | None:
+        return None
 
     def _to_mpmath(self, prec, allow_ints=True):
         # mpmath functions accept ints as input

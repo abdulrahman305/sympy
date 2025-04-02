@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import overload
+
 import numbers
 import decimal
 import fractions
@@ -440,8 +442,16 @@ class Number(AtomicExpr):
     def sort_key(self, order=None):
         return self.class_key(), (0, ()), (), self
 
+    def __neg__(self) -> Number:
+        raise NotImplementedError
+
+    @overload
+    def __add__(self, other: Number | int | float) -> Number: ...
+    @overload
+    def __add__(self, other: Expr) -> Expr: ...
+
     @_sympifyit('other', NotImplemented)
-    def __add__(self, other):
+    def __add__(self, other) -> Expr:
         if isinstance(other, Number) and global_parameters.evaluate:
             if other is S.NaN:
                 return S.NaN
@@ -4190,7 +4200,7 @@ def equal_valued(x, y):
     Explanation
     ===========
 
-    In future SymPy verions Float and Rational might compare unequal and floats
+    In future SymPy versions Float and Rational might compare unequal and floats
     with different precisions might compare unequal. In that context a function
     is needed that can check if a number is equal to 1 or 0 etc. The idea is
     that instead of testing ``if x == 1:`` if we want to accept floats like
@@ -4350,7 +4360,7 @@ def all_close(expr1, expr2, rtol=1e-5, atol=1e-8):
         assert expr1.is_Add or expr2.is_Add
         cd1 = expr1.as_coefficients_dict()
         cd2 = expr2.as_coefficients_dict()
-        # this test will asure that the key of 1 is in
+        # this test will assure that the key of 1 is in
         # each dict and that they have equal values
         if not _close_num(cd1[1], cd2[1]):
             return False
