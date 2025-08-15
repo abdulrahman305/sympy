@@ -37,7 +37,7 @@ from sympy.core.logic import fuzzy_not
 from sympy.core.mul import Mul
 from sympy.core.numbers import Integer, Number, E
 from sympy.core.power import Pow
-from sympy.core.relational import Eq, Ne, Boolean
+from sympy.core.relational import Eq, Ne
 from sympy.core.singleton import S
 from sympy.core.symbol import Dummy, Symbol, Wild
 from sympy.functions.elementary.complexes import Abs
@@ -49,7 +49,7 @@ from sympy.functions.elementary.piecewise import Piecewise
 from sympy.functions.elementary.trigonometric import (TrigonometricFunction,
     cos, sin, tan, cot, csc, sec, acos, asin, atan, acot, acsc, asec)
 from sympy.functions.special.delta_functions import Heaviside, DiracDelta
-from sympy.functions.special.error_functions import (erf, erfi, fresnelc,
+from sympy.functions.special.error_functions import (erf, erfc, erfi, fresnelc,
     fresnels, Ci, Chi, Si, Shi, Ei, li)
 from sympy.functions.special.gamma_functions import uppergamma
 from sympy.functions.special.elliptic_integrals import elliptic_e, elliptic_f
@@ -58,11 +58,12 @@ from sympy.functions.special.polynomials import (chebyshevt, chebyshevu,
     OrthogonalPolynomial)
 from sympy.functions.special.zeta_functions import polylog
 from .integrals import Integral
-from sympy.logic.boolalg import And
+from sympy.logic.boolalg import And, Boolean
 from sympy.ntheory.factor_ import primefactors
 from sympy.polys.polytools import degree, lcm_list, gcd_list, Poly
 from sympy.simplify.radsimp import fraction
 from sympy.simplify.simplify import simplify
+from sympy.simplify.powsimp import powsimp
 from sympy.solvers.solvers import solve
 from sympy.strategies.core import switch, do_one, null_safe, condition
 from sympy.utilities.iterables import iterable
@@ -971,6 +972,29 @@ def exp_rule(integral):
         return ExpRule(integrand, symbol, E, integrand.args[0])
 
 
+def powsimp_rule(integral):
+    """
+    Strategy that simplifies the exponent of a power.
+    exp(a*x**2) * exp(b*x) -> exp((a*x**2 + b*x))
+    For example, this is useful for the ErfRule.
+    """
+    integrand, symbol = integral
+    a = Wild('a', exclude=[symbol])
+    b = Wild('b', exclude=[symbol])
+    k = Wild('k', exclude=[symbol])
+
+    match = integrand.match(k**(a*symbol**2) * k**(b*symbol))
+
+    if not match:
+        return
+
+    simplified = powsimp(integrand, combine='exp')
+
+    if simplified != integrand:
+        steps = integral_steps(simplified, symbol)
+        return RewriteRule(integrand, symbol, simplified, steps)
+
+
 def orthogonal_poly_rule(integral):
     orthogonal_poly_classes = {
         jacobi: JacobiRule,
@@ -1066,7 +1090,7 @@ def nested_pow_rule(integral: IntegralInfo):
     a_ = Wild('a', exclude=[x])
     b_ = Wild('b', exclude=[x, 0])
     pattern = a_+b_*x
-    generic_cond = S.true
+    generic_cond: Boolean = S.true
 
     class NoMatch(Exception):
         pass
@@ -1167,7 +1191,7 @@ def inverse_trig_rule(integral: IntegralInfo, degenerate=True):
         step = _add_degenerate_step(non_square_cond, generic_step, square_step)
         if k.is_real and c.is_real:
             # list of ((rule, base_exp, a, sign_a, b, sign_b), condition)
-            rules = []
+            rules: list[tuple[Rule, Boolean]] = []
             for args, cond in (  # don't apply ArccoshRule to x**2-1
                 ((ArcsinRule, k, 1, -c, -1, h), And(k > 0, c < 0)),  # 1-x**2
                 ((ArcsinhRule, k, 1, c, 1, h), And(k > 0, c > 0)),  # 1+x**2
@@ -1233,7 +1257,7 @@ def _parts_rule(integrand, symbol) -> tuple[Expr, Expr, Expr, Expr, Rule] | None
         return pull_out_u_rl
 
     liate_rules = [pull_out_u(log), pull_out_u(*inverse_trig_functions),
-                   pull_out_algebraic, pull_out_u(sin, cos),
+                   pull_out_u(erf, erfc, erfi), pull_out_algebraic, pull_out_u(sin, cos),
                    pull_out_u(exp)]
 
 
@@ -2088,6 +2112,9 @@ def integral_steps(integrand, symbol, **options):
             null_safe(alternatives(
                 rewrites_rule,
                 substitution_rule,
+                condition(
+                    integral_is_subclass(Mul, Pow),
+                    powsimp_rule),
                 condition(
                     integral_is_subclass(Mul, Pow),
                     partial_fractions_rule),

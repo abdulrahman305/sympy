@@ -36,6 +36,25 @@ available.
 Abstract Domains
 ================
 
+.. autoclass:: sympy.polys.domains.domain.RingElement
+.. autoclass:: sympy.polys.domains.domain.FieldElement
+.. autoclass:: sympy.polys.domains.domain.EuclidElement
+.. autoclass:: sympy.polys.domains.domain.AbsElement
+.. autoclass:: sympy.polys.domains.domain.OrderedElement
+
+.. autoclass:: sympy.polys.domains.domain.Er
+.. autoclass:: sympy.polys.domains.domain.Es
+.. autoclass:: sympy.polys.domains.domain.Et
+.. autoclass:: sympy.polys.domains.domain.Eg
+.. py:class:: sympy.polys.densebasic.Epa
+.. autoclass:: sympy.polys.domains.domain.Ef
+.. autoclass:: sympy.polys.domains.domain.Eeuclid
+.. autoclass:: sympy.polys.domains.domain.Eabs
+.. autoclass:: sympy.polys.domains.domain.Eordered
+.. py:class:: sympy.polys.domains.domain.TypeIs
+.. autoclass:: sympy.polys.domains.gaussiandomains.Telem
+.. autoclass:: sympy.polys.domains.gaussiandomains.Tdom
+
 .. autoclass:: sympy.polys.domains.domain.Domain
    :members:
 
@@ -292,6 +311,15 @@ EX
    :members:
 
 .. autoclass:: sympy.polys.domains.expressiondomain::ExpressionDomain.Expression
+   :members:
+
+
+.. _EXRAW:
+
+EXRAW
+=====
+
+.. autoclass:: sympy.polys.domains.expressionrawdomain::ExpressionRawDomain
    :members:
 
 

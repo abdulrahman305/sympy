@@ -6,6 +6,7 @@
 
 import os
 import re
+from pathlib import Path
 
 from sympy.assumptions.ask import Q
 from sympy.core.basic import Basic
@@ -47,8 +48,7 @@ def test_all_classes_are_tested():
             if not file.endswith(".py"):
                 continue
 
-            with open(os.path.join(root, file), encoding='utf-8') as f:
-                text = f.read()
+            text = Path(os.path.join(root, file)).read_text(encoding='utf-8')
 
             submodule = module + '.' + file[:-3]
 
@@ -338,6 +338,14 @@ def test_sympy__codegen__ast__RuntimeError_():
 def test_sympy__codegen__ast__FunctionCall():
     from sympy.codegen.ast import FunctionCall
     assert _test_args(FunctionCall('pwer', [x]))
+
+
+def test_sympy__codegen__ast__KeywordFunctionCall():
+    from sympy.codegen.ast import KeywordFunctionCall, String
+    from sympy.core.containers import Tuple
+    from sympy.core.symbol import Symbol
+    obj = KeywordFunctionCall(String('reshape'), Tuple(Symbol('x'), Symbol('y')), {'order': Symbol('z')})
+    assert _test_args(obj)
 
 
 def test_sympy__codegen__ast__Element():
