@@ -824,14 +824,18 @@ class LatexPrinter(Printer):
         else:
             tex = r"\frac{%s^{%s}}{%s}" % (diff_symbol, self._print(dim), tex)
 
+        precedence = PRECEDENCE["Mul"]
+        if self._settings['mul_symbol']:
+            # Nudge up the precedence so d/dx (f(x) * g(x)) also gets parenthesized
+            precedence += 1
         if any(i.could_extract_minus_sign() for i in expr.args):
             return r"%s %s" % (tex, self.parenthesize(expr.expr,
-                                                  PRECEDENCE["Mul"],
+                                                  precedence,
                                                   is_neg=True,
                                                   strict=True))
 
         return r"%s %s" % (tex, self.parenthesize(expr.expr,
-                                                  PRECEDENCE["Mul"],
+                                                  precedence,
                                                   is_neg=False,
                                                   strict=True))
 
@@ -1873,6 +1877,10 @@ class LatexPrinter(Printer):
     def _print_MatrixSymbol(self, expr):
         return self._print_Symbol(expr, style=self._settings[
             'mat_symbol_style'])
+
+    def _print_MatrixUnit(self, E):
+        return "E_{%s,%s}" % (self._print(E._i), self._print(E._j)) \
+            if self._settings['mat_symbol_style'] == 'plain' else r"\mathcal{E}_{%s,%s}" % (self._print(E._i), self._print(E._j))
 
     def _print_ZeroMatrix(self, Z):
         return "0" if self._settings[

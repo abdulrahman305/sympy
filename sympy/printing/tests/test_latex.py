@@ -944,6 +944,18 @@ def test_latex_derivatives():
     assert latex(diff(f(x), (x, Max(n1, n2)))) == \
         r'\frac{d^{\max\left(n_{1}, n_{2}\right)}}{d x^{\max\left(n_{1}, n_{2}\right)}} f{\left(x \right)}'
 
+    # parenthesizing of the argument
+    g = Function("g")
+    # addition always parenthesized
+    for mul_symbol in (None, 'dot'):
+        assert latex(Derivative(f(x) + g(x), x), mul_symbol=mul_symbol) == \
+            r"\frac{d}{d x} \left(f{\left(x \right)} + g{\left(x \right)}\right)"
+    # multiplication parenthesized only if mul_symbol isn't None
+    assert latex(Derivative(f(x) * g(x), x)) == \
+        r"\frac{d}{d x} f{\left(x \right)} g{\left(x \right)}"
+    assert latex(Derivative(f(x) * g(x), x), mul_symbol='dot') == \
+        r"\frac{d}{d x} \left(f{\left(x \right)} \cdot g{\left(x \right)}\right)"
+
     # set diff operator
     assert latex(diff(f(x), x), diff_operator="rd") == r'\frac{\mathrm{d}}{\mathrm{d} x} f{\left(x \right)}'
 
@@ -2208,6 +2220,12 @@ def test_ElementwiseApplyFunction():
     assert latex(expr) == r"{\left( d \mapsto \sin{\left(d \right)} \right)}_{\circ}\left({X^{T} X}\right)"
     expr = X.applyfunc(Lambda(x, 1/x))
     assert latex(expr) == r'{\left( x \mapsto \frac{1}{x} \right)}_{\circ}\left({X}\right)'
+
+
+def test_MatrixUnit():
+    from sympy.matrices.expressions.special import MatrixUnit
+    assert latex(MatrixUnit(3, 3, 1, 2), mat_symbol_style='plain') == 'E_{1,2}'
+    assert latex(MatrixUnit(3, 3, 1, 2), mat_symbol_style='bold') == r'\mathcal{E}_{1,2}'
 
 
 def test_ZeroMatrix():
